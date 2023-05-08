@@ -2,8 +2,7 @@
 // los nombres deben sern iguales a los definidos en el schema
 const resolvers = {
     Query: {
-        
-        
+        getCourse: () => "Something"
     }
 }
 

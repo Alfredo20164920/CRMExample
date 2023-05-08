@@ -5,7 +5,9 @@ const { gql } = require('apollo-server');
 // Schema => Describe los datos, su estructura debe ser similar a la de la BD
 
 const typeDefs = gql`
-
+    type Query {
+        getCourse: String
+    }
 `;
 
 module.exports = typeDefs;
