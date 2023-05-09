@@ -6,6 +6,7 @@ require('dotenv').config({path: ".env"});
 
 const User = require('../models/user');
 const Product = require('../models/product');
+const Client = require('../models/client');
 
 const crearToken = (user, secretWord, expiresIn) => {
     const { id, name, lastName, email } = user;
