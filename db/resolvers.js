@@ -36,6 +36,36 @@ const resolvers = {
             }
 
             return product;
+        },
+        getClients: async () => {
+            try {
+                const clients = await Client.find({});
+                return clients;
+            } catch (error) {
+                console.log(error)
+            }
+        },
+        getClientBySeller: async (_, {}, ctx) => {
+            try {
+                const clients = await Client.find({seller: ctx.user.id.toString()});
+                return clients;
+            } catch (error) {
+                console.log(error)
+            }
+        },
+        getClientById: async (_, { id }, ctx) => {
+            // Is the product exist
+            const client = await Client.findById(id);
+            if (!client) {
+                throw new Error('Client not found');
+            }
+
+            // Only the person who create can see it
+            if(client.seller.toString() !== ctx.user.id){
+                throw new Error('You are not authorized to see this client');
+            }
+
+            return client
         }
     },
     Mutation: {
