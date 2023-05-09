@@ -269,6 +269,69 @@ const resolvers = {
             // Save
             const result = await newOrder.save();
             return result;
+        },
+        updateOrder: async (_, { id, input }, ctx) => {
+
+            const {client} = input
+
+            // Verify if the order exist
+            const isExistOrder = await Order.findById(id);
+            if(!isExistOrder) {
+                throw new Error('Order not found');
+            }
+
+            // Verify if client exist
+            let isClientExist = await Client.findById(client);
+            if(!isClientExist) {
+                throw new Error('Client not found');
+            }
+            
+            // Verify if the order is from de seller
+            if (isClientExist.seller.toString() !== ctx.user.id) {
+                throw new Error('You are not authorized to update this client');
+            }
+            // Check the stock
+
+            if(input.order) {
+
+                for await (const article of input.order) {
+    
+                    const { id } = article;
+        
+                    const product = await Product.findById(id);
+    
+                    if(article.quantity > product.stock) {
+                        throw new Error(`Article: ${product.name} don´t have stock`);
+                    } else {
+                        // Reduce quantity
+                        product.stock -= article.quantity;
+                        await product.save();
+                    }
+    
+                }
+            } 
+
+
+            // Save order
+            const result = await Order.findByIdAndUpdate({_id: id}, input, {new: true});
+            return result;
+        },
+        deleteOrder: async (_, { id }, ctx) => {
+            // Verify if order exist
+            const order = await Order.findById(id);
+            if(!order) {
+                throw new Error('Order not found');
+            }
+
+
+            // Verify if the seller try to delete
+            if (order.seller.toString() !== ctx.user.id) {
+                throw new Error('You are not authorized to delete this order');
+            }
+
+            // Delete
+            await Order.findOneAndDelete({_id: id});
+            return "Order deleted";
         }
     }
 }
