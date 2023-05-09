@@ -25,9 +25,49 @@ const typeDefs = gql`
         created: String
     }
 
+    type Client {
+        id: ID
+        name: String
+        lastName: String
+        company: String
+        email: String
+        phone: String
+        seller: ID
+    }
+
+    type Order {
+        id: ID
+        order: [OrderGroup]
+        total: Float
+        client: ID
+        seller: ID
+        status: StatusOrder
+        created: String
+    }
+
+    type OrderGroup {
+        id: ID
+        quantity: Int
+    }
+
+    type TopClient {
+        client: [Client]
+        total: Float
+    }
+
+    type TopSeller {
+        seller: [User]
+        total: Float
+    }
+
     input UserInput {
         name: String!
         lastName: String!
+        email: String!
+        password: String!
+    }
+
+    input AuthenticateInput {
         email: String!
         password: String!
     }
@@ -38,9 +78,30 @@ const typeDefs = gql`
         price: Float!
     }
 
-    input AuthenticateInput {
+    input ClientInput {
+        name: String!
+        lastName: String!
+        company: String!
         email: String!
-        password: String!
+        phone: String
+    }
+
+    input OrderProductInput {
+        id: ID
+        quantity: Int
+    }
+
+    input OrderInput {
+        order: [OrderProductInput]
+        total: Float
+        client: ID
+        status: StatusOrder
+    }
+
+    enum StatusOrder {
+        PENDING,
+        COMPLETED
+        CANCELED
     }
 
     type Query {
@@ -50,6 +111,22 @@ const typeDefs = gql`
         # Products
         getProducts: [Product]
         getProductById(id: ID!): Product
+
+        # Clients
+        getClients: [Client]
+        getClientBySeller: [Client]
+        getClientById(id: ID!): Client
+
+        # Orders
+        getOrders: [Order]
+        getOrdersBySeller: [Order]
+        getOrderById(id: ID!): Order
+        getOrderByStatus(status: String!): [Order]
+
+        # Advanced 
+        bestClients: [TopClient]
+        bestSellers: [TopSeller]
+        searchProduct(text: String!): [Product]
     }
 
     type Mutation {
@@ -61,6 +138,16 @@ const typeDefs = gql`
         createProduct(input: ProductInput): Product
         updateProduct( id: ID!, input: ProductInput ): Product
         deleteProduct(id: ID!): String
+
+        # Clients
+        createClient(input: ClientInput): Client
+        updateClient( id: ID!, input: ClientInput ): Client
+        deleteClient(id: ID!): String
+
+        # Orders
+        createOrder(input: OrderInput): Order
+        updateOrder( id: ID!, input: OrderInput ): Order
+        deleteOrder(id: ID!): String
     }
 `;
 
