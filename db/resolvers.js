@@ -7,6 +7,7 @@ require('dotenv').config({path: ".env"});
 const User = require('../models/user');
 const Product = require('../models/product');
 const Client = require('../models/client');
+const Order = require('../models/order');
 
 const crearToken = (user, secretWord, expiresIn) => {
     const { id, name, lastName, email } = user;
@@ -148,7 +149,6 @@ const resolvers = {
         },
         createClient: async (_, { input }, ctx) => {
             // Verify if exist
-            console.log(ctx);
             const { email } = input;
             const isClientExist = await Client.findOne({ email });
             if (isClientExist) {
@@ -197,6 +197,46 @@ const resolvers = {
             await Client.findOneAndDelete({_id: id});
             return "Client deleted";
 
+        },
+        createOrder: async (_, { input }, ctx) => {
+            const { client } = input;
+            // Verify if client exist
+            let isClientExist = await Client.findById(client);
+            if(!isClientExist) {
+                throw new Error('Client not found');
+            }
+
+            // Verify if the order is from de seller
+            if (isClientExist.seller.toString() !== ctx.user.id) {
+                throw new Error('You are not authorized to update this client');
+            }
+
+            // Check the stock
+            for await (const article of input.order) {
+
+                const { id } = article;
+    
+                const product = await Product.findById(id);
+
+                if(article.quantity > product.stock) {
+                    throw new Error(`Article: ${product.name} don´t have stock`);
+                } else {
+                    // Reduce quantity
+                    product.stock -= article.quantity;
+                    await product.save();
+                }
+
+            }
+
+            // Create new order
+            const newOrder = new Order(input);
+
+            // Assign seller
+            newOrder.seller = ctx.user.id;
+
+            // Save
+            const result = await newOrder.save();
+            return result;
         }
     }
 }
