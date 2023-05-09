@@ -118,7 +118,7 @@ const resolvers = {
         },
         createClient: async (_, { input }, ctx) => {
             // Verify if exist
-            console.log(input);
+            console.log(ctx);
             const { email } = input;
             const isClientExist = await Client.findOne({ email });
             if (isClientExist) {
@@ -127,7 +127,7 @@ const resolvers = {
 
             // Assign seller
             const client = new Client(input);
-            client.seller = "645985d1f59859ed739487a2";
+            client.seller = ctx.user.id;
             
             // Save
             try {
