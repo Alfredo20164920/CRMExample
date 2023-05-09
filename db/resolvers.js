@@ -6,10 +6,11 @@ require('dotenv').config({path: ".env"});
 
 const User = require('../models/user');
 const Product = require('../models/product');
+const Client = require('../models/client');
 
 const crearToken = (user, secretWord, expiresIn) => {
     const { id, name, lastName, email } = user;
-    return jwt.sign( { id, name, lastName, email }, secretWord, { expiresIn })
+    return jwt.sign ( { id, name, lastName, email }, secretWord, { expiresIn })
 }
 
 const resolvers = {
@@ -35,6 +36,36 @@ const resolvers = {
             }
 
             return product;
+        },
+        getClients: async () => {
+            try {
+                const clients = await Client.find({});
+                return clients;
+            } catch (error) {
+                console.log(error)
+            }
+        },
+        getClientBySeller: async (_, {}, ctx) => {
+            try {
+                const clients = await Client.find({seller: ctx.user.id.toString()});
+                return clients;
+            } catch (error) {
+                console.log(error)
+            }
+        },
+        getClientById: async (_, { id }, ctx) => {
+            // Is the product exist
+            const client = await Client.findById(id);
+            if (!client) {
+                throw new Error('Client not found');
+            }
+
+            // Only the person who create can see it
+            if(client.seller.toString() !== ctx.user.id){
+                throw new Error('You are not authorized to see this client');
+            }
+
+            return client
         }
     },
     Mutation: {
@@ -114,6 +145,58 @@ const resolvers = {
             
             await Product.findOneAndDelete({_id: id});
             return "Product deleted";
+        },
+        createClient: async (_, { input }, ctx) => {
+            // Verify if exist
+            console.log(ctx);
+            const { email } = input;
+            const isClientExist = await Client.findOne({ email });
+            if (isClientExist) {
+                throw new Error('Client already exist');
+            }
+
+            // Assign seller
+            const client = new Client(input);
+            client.seller = ctx.user.id;
+            
+            // Save
+            try {
+                const result = await client.save();
+                return result;
+            } catch (error) {
+                console.log(error)
+            }
+        },
+        updateClient: async (_, { id, input }, ctx) => {
+            let client = await Client.findById(id);
+            if (!client) {
+                throw new Error('Client not found');
+            }
+
+            // Verify seller
+            if (client.seller.toString() !== ctx.user.id) {
+                throw new Error('You are not authorized to update this client');
+            }
+
+            // Update client
+            client = await Client.findOneAndUpdate({ _id: id }, input, {new: true});
+            return client;
+        },
+        deleteClient: async (_, { id }, ctx) => {
+            let client = await Client.findById(id);
+            if (!client) {
+                throw new Error('Client not found');
+            }
+
+            // Verify seller
+            if (client.seller.toString() !== ctx.user.id) {
+                throw new Error('You are not authorized to update this client');
+            }
+
+            // Delete Client
+            await Client.findOneAndDelete({_id: id});
+            return "Client deleted";
+
         }
     }
 }
