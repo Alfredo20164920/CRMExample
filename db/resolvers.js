@@ -5,6 +5,7 @@ const jwt = require('jsonwebtoken');
 require('dotenv').config({path: ".env"});
 
 const User = require('../models/user');
+const Product = require('../models/product');
 
 const crearToken = (user, secretWord, expiresIn) => {
     const { id, name, lastName, email } = user;
@@ -17,6 +18,23 @@ const resolvers = {
             const userId = await jwt.verify(token, process.env.SECRET_WORD);
 
             return userId;
+        },
+        getProducts: async () => {
+            try {
+                const products = await Product.find({});
+                return products;
+            } catch (error) {
+                console.log(error)
+            }
+        },
+        getProductById: async (_, { id }, ctx) => {
+            // Is the product exist
+            const product = await Product.findById(id);
+            if (!product) {
+                throw new Error('Product not found');
+            }
+
+            return product;
         }
     },
     Mutation: {
@@ -65,6 +83,37 @@ const resolvers = {
                 token: crearToken(isUserExist, process.env.SECRET_WORD, '24h'),
             }
 
+        },
+        createProduct: async (_, { input }, ctx) => {
+            try {
+                const product = new Product(input);
+
+                // Save in DB
+                const result = await product.save();
+
+                return result;
+            } catch (error) {
+                console.log(error);
+            }
+        },
+        updateProduct: async (_, { id, input }, ctx) => {
+            let product = await Product.findById(id);
+            if (!product) {
+                throw new Error('Product not found');
+            }
+
+            // save on db
+            product = await Product.findOneAndUpdate({_id: id }, input, {new: true}); 
+            return product;   
+        },
+        deleteProduct: async (_, { id }, ctx) => {
+            let product = await Product.findById(id);
+            if (!product) {
+                throw new Error('Product not found');
+            }
+            
+            await Product.findOneAndDelete({_id: id});
+            return "Product deleted";
         }
     }
 }
