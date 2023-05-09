@@ -105,6 +105,15 @@ const resolvers = {
             // save on db
             product = await Product.findOneAndUpdate({_id: id }, input, {new: true}); 
             return product;   
+        },
+        deleteProduct: async (_, { id }, ctx) => {
+            let product = await Product.findById(id);
+            if (!product) {
+                throw new Error('Product not found');
+            }
+            
+            await Product.findOneAndDelete({_id: id});
+            return "Product deleted";
         }
     }
 }
