@@ -7,6 +7,7 @@ require('dotenv').config({path: ".env"});
 const User = require('../models/user');
 const Product = require('../models/product');
 const Client = require('../models/client');
+const Order = require('../models/order');
 
 const crearToken = (user, secretWord, expiresIn) => {
     const { id, name, lastName, email } = user;
@@ -66,6 +67,88 @@ const resolvers = {
             }
 
             return client
+        },
+        getOrders: async () => {
+            try {
+                const orders = await Order.find({});
+                return orders;
+            } catch (error) {
+                console.log(error)
+            }
+        },
+        getOrdersBySeller: async(_, { }, ctx) => {
+            try {
+                const orders = await Order.find({seller: ctx.user.id.toString()});
+                return orders;
+            } catch (error) {
+                console.log(error)
+            }
+        },
+        getOrderById: async (_, { id }, ctx) => {
+            // Is the product exist
+            const order = await Order.findById(id);
+            if (!order) {
+                throw new Error('Order not found');
+            }
+
+            // Only the person who create can see it 
+            if(order.seller.toString() !== ctx.user.id){
+                throw new Error('You are not authorized to see this order');
+            }
+
+            // Return values
+            return order;
+
+        },
+        getOrderByStatus: async (_, { status }, ctx) => {
+            const orders = await Order.find({seller: ctx.user.id, status});
+
+            return orders;
+        },
+        bestClients: async () => {
+            const clients = await Order.aggregate([
+                { $match: {status: "COMPLETED"}},
+                { $group: { _id: "$client", total: { $sum: "$total" } } },
+                { 
+                    $lookup: {
+                        from: 'clients',
+                        localField: '_id',
+                        foreignField: '_id',
+                        as: 'client'
+                    }
+                },
+                { $limit: 10 },
+                {
+                    $sort: {
+                        total: -1
+                    }
+                }
+            ]);
+
+            return clients; 
+        },
+        bestSellers: async () => {
+            const sellers = await Order.aggregate([
+                { $match: {status: "COMPLETED"}},
+                { $group: { _id: "$seller", total: {$sum: "$total"} } },
+                {
+                    $lookup: {
+                        from: 'users',
+                        localField: '_id',
+                        foreignField: '_id',
+                        as: 'seller'
+                    }
+                },
+                { $limit: 3 },
+                { $sort: { total: -1 } }
+            ]);
+
+            return sellers;
+        },
+        searchProduct: async (_, { text }, ctx) => {
+            const products = await Product.find({ $text: {$search: text} }).limit(10);
+
+            return products;
         }
     },
     Mutation: {
@@ -148,7 +231,6 @@ const resolvers = {
         },
         createClient: async (_, { input }, ctx) => {
             // Verify if exist
-            console.log(ctx);
             const { email } = input;
             const isClientExist = await Client.findOne({ email });
             if (isClientExist) {
@@ -197,6 +279,109 @@ const resolvers = {
             await Client.findOneAndDelete({_id: id});
             return "Client deleted";
 
+        },
+        createOrder: async (_, { input }, ctx) => {
+            const { client } = input;
+            // Verify if client exist
+            let isClientExist = await Client.findById(client);
+            if(!isClientExist) {
+                throw new Error('Client not found');
+            }
+
+            // Verify if the order is from de seller
+            if (isClientExist.seller.toString() !== ctx.user.id) {
+                throw new Error('You are not authorized to update this client');
+            }
+
+            // Check the stock
+            for await (const article of input.order) {
+
+                const { id } = article;
+    
+                const product = await Product.findById(id);
+
+                if(article.quantity > product.stock) {
+                    throw new Error(`Article: ${product.name} don´t have stock`);
+                } else {
+                    // Reduce quantity
+                    product.stock -= article.quantity;
+                    await product.save();
+                }
+
+            }
+
+            // Create new order
+            const newOrder = new Order(input);
+
+            // Assign seller
+            newOrder.seller = ctx.user.id;
+
+            // Save
+            const result = await newOrder.save();
+            return result;
+        },
+        updateOrder: async (_, { id, input }, ctx) => {
+
+            const {client} = input
+
+            // Verify if the order exist
+            const isExistOrder = await Order.findById(id);
+            if(!isExistOrder) {
+                throw new Error('Order not found');
+            }
+
+            // Verify if client exist
+            let isClientExist = await Client.findById(client);
+            if(!isClientExist) {
+                throw new Error('Client not found');
+            }
+            
+            // Verify if the order is from de seller
+            if (isClientExist.seller.toString() !== ctx.user.id) {
+                throw new Error('You are not authorized to update this client');
+            }
+            // Check the stock
+
+            if(input.order) {
+
+                for await (const article of input.order) {
+    
+                    const { id } = article;
+        
+                    const product = await Product.findById(id);
+    
+                    if(article.quantity > product.stock) {
+                        throw new Error(`Article: ${product.name} don´t have stock`);
+                    } else {
+                        // Reduce quantity
+                        product.stock -= article.quantity;
+                        await product.save();
+                    }
+    
+                }
+            } 
+
+
+            // Save order
+            const result = await Order.findByIdAndUpdate({_id: id}, input, {new: true});
+            return result;
+        },
+        deleteOrder: async (_, { id }, ctx) => {
+            // Verify if order exist
+            const order = await Order.findById(id);
+            if(!order) {
+                throw new Error('Order not found');
+            }
+
+
+            // Verify if the seller try to delete
+            if (order.seller.toString() !== ctx.user.id) {
+                throw new Error('You are not authorized to delete this order');
+            }
+
+            // Delete
+            await Order.findOneAndDelete({_id: id});
+            return "Order deleted";
         }
     }
 }
