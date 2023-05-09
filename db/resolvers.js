@@ -67,6 +67,38 @@ const resolvers = {
             }
 
             return client
+        },
+        getOrders: async () => {
+            try {
+                const orders = await Order.find({});
+                return orders;
+            } catch (error) {
+                console.log(error)
+            }
+        },
+        getOrdersBySeller: async(_, { }, ctx) => {
+            try {
+                const orders = await Order.find({seller: ctx.user.id.toString()});
+                return orders;
+            } catch (error) {
+                console.log(error)
+            }
+        },
+        getOrderById: async (_, { id }, ctx) => {
+            // Is the product exist
+            const order = await Order.findById(id);
+            if (!order) {
+                throw new Error('Order not found');
+            }
+
+            // Only the person who create can see it 
+            if(order.seller.toString() !== ctx.user.id){
+                throw new Error('You are not authorized to see this order');
+            }
+
+            // Return values
+            return order;
+
         }
     },
     Mutation: {
