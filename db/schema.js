@@ -87,6 +87,8 @@ const typeDefs = gql`
 
         # Clients
         createClient(input: ClientInput): Client
+        updateClient( id: ID!, input: ClientInput ): Client
+        deleteClient(id: ID!): String
     }
 `;
 

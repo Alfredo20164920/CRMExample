@@ -166,6 +166,37 @@ const resolvers = {
             } catch (error) {
                 console.log(error)
             }
+        },
+        updateClient: async (_, { id, input }, ctx) => {
+            let client = await Client.findById(id);
+            if (!client) {
+                throw new Error('Client not found');
+            }
+
+            // Verify seller
+            if (client.seller.toString() !== ctx.user.id) {
+                throw new Error('You are not authorized to update this client');
+            }
+
+            // Update client
+            client = await Client.findOneAndUpdate({ _id: id }, input, {new: true});
+            return client;
+        },
+        deleteClient: async (_, { id }, ctx) => {
+            let client = await Client.findById(id);
+            if (!client) {
+                throw new Error('Client not found');
+            }
+
+            // Verify seller
+            if (client.seller.toString() !== ctx.user.id) {
+                throw new Error('You are not authorized to update this client');
+            }
+
+            // Delete Client
+            await Client.findOneAndDelete({_id: id});
+            return "Client deleted";
+
         }
     }
 }
