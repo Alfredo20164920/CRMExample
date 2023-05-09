@@ -99,6 +99,11 @@ const resolvers = {
             // Return values
             return order;
 
+        },
+        getOrderByStatus: async (_, { status }, ctx) => {
+            const orders = await Order.find({seller: ctx.user.id, status});
+
+            return orders;
         }
     },
     Mutation: {
