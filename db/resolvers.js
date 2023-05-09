@@ -26,6 +26,15 @@ const resolvers = {
             } catch (error) {
                 console.log(error)
             }
+        },
+        getProductById: async (_, { id }, ctx) => {
+            // Is the product exist
+            const product = await Product.findById(id);
+            if (!product) {
+                throw new Error('Product not found');
+            }
+
+            return product;
         }
     },
     Mutation: {
