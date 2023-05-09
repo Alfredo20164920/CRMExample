@@ -5,6 +5,7 @@ const jwt = require('jsonwebtoken');
 require('dotenv').config({path: ".env"});
 
 const User = require('../models/user');
+const Product = require('../models/product');
 
 const crearToken = (user, secretWord, expiresIn) => {
     const { id, name, lastName, email } = user;
@@ -65,6 +66,18 @@ const resolvers = {
                 token: crearToken(isUserExist, process.env.SECRET_WORD, '24h'),
             }
 
+        },
+        createProduct: async (_, { input }, ctx) => {
+            try {
+                const product = new Product(input);
+
+                // Save in DB
+                const result = await product.save();
+
+                return result;
+            } catch (error) {
+                console.log(error);
+            }
         }
     }
 }
