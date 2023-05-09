@@ -95,6 +95,16 @@ const resolvers = {
             } catch (error) {
                 console.log(error);
             }
+        },
+        updateProduct: async (_, { id, input }, ctx) => {
+            let product = await Product.findById(id);
+            if (!product) {
+                throw new Error('Product not found');
+            }
+
+            // save on db
+            product = await Product.findOneAndUpdate({_id: id }, input, {new: true}); 
+            return product;   
         }
     }
 }
