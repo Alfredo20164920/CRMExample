@@ -10,7 +10,7 @@ const Client = require('../models/client');
 
 const crearToken = (user, secretWord, expiresIn) => {
     const { id, name, lastName, email } = user;
-    return jwt.sign( { id, name, lastName, email }, secretWord, { expiresIn })
+    return jwt.sign ( { id, name, lastName, email }, secretWord, { expiresIn })
 }
 
 const resolvers = {
@@ -115,6 +115,27 @@ const resolvers = {
             
             await Product.findOneAndDelete({_id: id});
             return "Product deleted";
+        },
+        createClient: async (_, { input }, ctx) => {
+            // Verify if exist
+            console.log(input);
+            const { email } = input;
+            const isClientExist = await Client.findOne({ email });
+            if (isClientExist) {
+                throw new Error('Client already exist');
+            }
+
+            // Assign seller
+            const client = new Client(input);
+            client.seller = "645985d1f59859ed739487a2";
+            
+            // Save
+            try {
+                const result = await client.save();
+                return result;
+            } catch (error) {
+                console.log(error)
+            }
         }
     }
 }
